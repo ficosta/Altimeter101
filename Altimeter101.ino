@@ -86,6 +86,10 @@ int value, etat = 0; //nao sei p que serve ainda
 
 boolean longPush = false; //definir se o botao foi mto pressionado ou foi um click
 
+const int batVin = A2; //pino q a bateria esta colocado
+int batValue = 0; //valor lido do sensor
+int batPercent = 0; //porcentagem bateria
+
 void setup() {
 
   Serial.begin(9600);
@@ -97,53 +101,36 @@ void setup() {
 
   updateScreen = true;
   drawSplashScreen();
-  delay(5000);
 
   //TODO: adicionar rotina splash screen
   button1.isPressed(); // n sei p que serve
-  screen = 1;   //define a tela 1 como inicial
+  screen = 0;   //define a tela 0 como inicial - primeiro click vai p home
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
   button1.isPressed();
-
+  calculaBateria();
 
   //Serial.println("Loop"); //Rotina de debug do loop
 
   // desenhar telas
   switch (screen) {
     case 1: // Altitude
-      //     if (lastValue != altitude) {
-      //showScreen("ALTITUDE", altitude, METER);
-      //lastValue = altitude;
       drawHome();
-      //     }
       break;
 
-    case 2: // Altitude Max
-      //     if (lastValue != altiMax) {
-      //showScreen("ALTITUDE MAX", altiMax, METER);
-      //lastValue = altiMax;
+    case 2:
       drawAltiMax();
-      //    }
       break;
 
-    case 3:  // Altitude Min
-      //   if (lastValue != altiMin) {
-      //showScreen("ALTITUDE MIN", altiMin, METER);
-      //lastValue = altiMin;
+    case 3:
       drawAltiMin();
-      //     }
       break;
 
-    case 4:  // Pression
-      //      if (lastValue != pression) {
-      //showScreen("PRESSION", pression, HPA);
-      //lastValue = pression;
+    case 4:
       drawAltiAtual();
-      //  }
       break;
   }
 
@@ -158,7 +145,7 @@ void drawSplashScreen(void) {
   do {
     u8g.drawXBMP( 0, 0, logo_ss_width, logo_ss_height, logo_ss_bits);
     u8g.setFont(u8g_font_6x13);
-      u8g.drawStr(0, 60, "ficosta/Altimeter101");
+    u8g.drawStr(0, 60, "ficosta/Altimeter101");
   } while ( u8g.nextPage() );
 
   // rebuild the picture after some delay
@@ -174,10 +161,29 @@ void drawHome(void) {
     u8g.firstPage();
     do {
       u8g.setFont(u8g_font_6x13);
-      u8g.drawStr( 0, 12, "HOME!");
+      u8g.drawStr( 30, 10, "SENSORES:");
+
+      u8g.drawStr( 0, 30, "Bat:");
+      u8g.drawStr( 0, 45, "Temp:");
+      u8g.drawStr( 0, 60, "Pres:");
+      
+      //Sensor bateria
+      char buf[9];
+      sprintf(buf, " %d", batPercent);
+      u8g.setFont(u8g_font_helvB14n);
+      u8g.drawStr(30, 30, buf);
+
+      //Sensor Temperatura
+      u8g.drawStr(30, 45, "25");
+
+      //Sensor Barometrico
+      u8g.drawStr(30, 60, "0803");
+
+
+
     } while ( u8g.nextPage() );
     Serial.println("Home");
-    updateScreen = false;
+    updateScreen = true;
   }
 }
 void drawAltiMax(void) {
@@ -220,7 +226,11 @@ void drawAltiAtual(void) {
   }
 }
 
-
+void calculaBateria(void) {
+  batValue = analogRead(batVin);
+  // map it to the range of the analog out:
+  batPercent = map(batValue, 927, 1023, 0, 100);
+}
 
 // Management release the button
 void handleButtonReleaseEvents(Button &btn) {
@@ -256,5 +266,3 @@ void handleButtonHoldEvents(Button &btn) {
   }
   Serial.println("Hold");
 }
-
-
