@@ -2,6 +2,9 @@
 #include <SPI.h>
 #include <U8glib.h> //biblioteca display
 #include <Button.h> //biblioteca para botao unico
+#include <SFE_BMP180.h> //Biblioteca do barometro e termometro
+
+//DEFINICAO DO LOGO SPLASHSCREEN
 
 #define logo_ss_width 120
 #define logo_ss_height 50
@@ -78,6 +81,19 @@ U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NO_ACK); //definicao do display oled utiliz
 #define BUTTON1_PIN     4
 Button button1 = Button(BUTTON1_PIN, BUTTON_PULLUP_INTERNAL);
 
+//Definicao do sensor barometrico
+SFE_BMP180 pressure;
+//Variavel para pressao incial
+double baseline; // baseline pressure
+//Varialvel da altitude
+double T, alt, Pressure;
+
+bool lancando;
+
+int countDown = 10; //tempo contador lancamento
+const long interval = 1000;
+unsigned long previousMillis = 0;
+
 int screen = 0; // numero de cada tela
 bool updateScreen = false;
 #define NB_SCREENS 4  //numero maximo de telas
@@ -89,6 +105,7 @@ boolean longPush = false; //definir se o botao foi mto pressionado ou foi um cli
 const int batVin = A2; //pino q a bateria esta colocado
 int batValue = 0; //valor lido do sensor
 int batPercent = 0; //porcentagem bateria
+
 
 void setup() {
 
@@ -105,6 +122,19 @@ void setup() {
   //TODO: adicionar rotina splash screen
   button1.isPressed(); // n sei p que serve
   screen = 0;   //define a tela 0 como inicial - primeiro click vai p home
+
+  //Inicializar o sensor
+  if (pressure.begin()) {
+    Serial.println("BMP180 init success");
+    baseline = getPressure();
+  } else
+  {
+    // Oops, something went wrong, this is usually a connection problem,
+    // see the comments at the top of this sketch for the proper connections.
+
+    Serial.println("BMP180 init fail (disconnected?)\n\n");
+  }
+
 }
 
 void loop() {
@@ -112,7 +142,7 @@ void loop() {
 
   button1.isPressed();
   calculaBateria();
-
+  readAltitudePressure();
   //Serial.println("Loop"); //Rotina de debug do loop
 
   // desenhar telas
@@ -122,11 +152,11 @@ void loop() {
       break;
 
     case 2:
-      drawAltiMax();
+      drawReport();
       break;
 
     case 3:
-      drawAltiMin();
+      drawLancamento();
       break;
 
     case 4:
@@ -166,7 +196,7 @@ void drawHome(void) {
       u8g.drawStr( 0, 30, "Bat:");
       u8g.drawStr( 0, 45, "Temp:");
       u8g.drawStr( 0, 60, "Pres:");
-      
+
       //Sensor bateria
       char buf[9];
       sprintf(buf, " %d", batPercent);
@@ -174,10 +204,18 @@ void drawHome(void) {
       u8g.drawStr(30, 30, buf);
 
       //Sensor Temperatura
-      u8g.drawStr(30, 45, "25");
+      char outBufferT[8];
+      dtostrf(T, 0, 2, outBufferT);
+      u8g.drawStr(30, 45, outBufferT);
 
       //Sensor Barometrico
-      u8g.drawStr(30, 60, "0803");
+      // ACERTAR CONVERSAO PARA DOUBLE
+      u8g.setFont(u8g_font_helvB14n);
+
+      char outBuffer[8];
+      dtostrf(Pressure, 0, 2, outBuffer);
+      u8g.drawStr(30, 60, outBuffer);
+
 
 
 
@@ -186,30 +224,71 @@ void drawHome(void) {
     updateScreen = true;
   }
 }
-void drawAltiMax(void) {
+void drawReport(void) {
   //tela 2
   //Altitude Maxima
   if (updateScreen) {
     u8g.firstPage();
     do {
       u8g.setFont(u8g_font_6x13);
-      u8g.drawStr( 0, 12, "Alt maxima");
+      u8g.drawStr(25, 10, "RELATORIO:");
+      u8g.drawStr(0, 30, "Alt:");
+      u8g.drawStr(0, 45, "Vel:");
+
+      u8g.drawStr(70, 30, "metros");
+      u8g.drawStr(70, 45, "km/h");
+
+      u8g.setFont(u8g_font_helvB14n);
+      u8g.drawStr(25, 30, "2500");
+      u8g.drawStr(25, 45, "40");
+
+
+
     } while ( u8g.nextPage() );
-    Serial.println("AMax");
     updateScreen = false;
   }
 }
-void drawAltiMin(void) {
+void drawLancamento(void) {
   // tela 3
   //Altitude Minima
   if (updateScreen) {
     u8g.firstPage();
     do {
       u8g.setFont(u8g_font_6x13);
-      u8g.drawStr( 0, 12, "Alti Minima");
+      u8g.drawStr( 30, 12, "LANCAMENTO:");
+
+      if (lancando) {
+        u8g.drawStr(75, 64, "Abortar?");
+        updateScreen = true;
+        unsigned long currentMillis = millis();
+
+        if (currentMillis - previousMillis >= interval) {
+          previousMillis  = currentMillis;
+          countDown--;
+
+          if (countDown <= 0) {
+            Serial.println("LANCADO");
+            lancando = false;
+            countDown = 10;
+            screen = 0;
+             drawSplashScreen();
+          }
+          Serial.println(countDown);
+        }
+
+      } else {
+        u8g.drawStr(80, 64, "Lancar?");
+        updateScreen = false;
+      }
+
+      char bufCount[9];
+      sprintf(bufCount, " %d", countDown);
+      u8g.setFont(u8g_font_helvB14n);
+      u8g.drawStr(50, 40, bufCount);
+
+
     } while ( u8g.nextPage() );
-    Serial.println("Amin");
-    updateScreen = false;
+    Serial.println("Lancamento");
   }
 }
 void drawAltiAtual(void) {
@@ -219,7 +298,10 @@ void drawAltiAtual(void) {
     u8g.firstPage();
     do {
       u8g.setFont(u8g_font_6x13);
-      u8g.drawStr( 0, 12, "Alti atual");
+      u8g.drawStr( 0, 12, "ALTITUDE ATUAL:");
+
+
+
     } while ( u8g.nextPage() );
     Serial.println("ATual");
     updateScreen = false;
@@ -230,6 +312,78 @@ void calculaBateria(void) {
   batValue = analogRead(batVin);
   // map it to the range of the analog out:
   batPercent = map(batValue, 927, 1023, 0, 100);
+}
+
+void readAltitudePressure(void) {
+  Pressure = getPressure();
+
+  // Show the relative altitude difference between
+  // the new reading and the baseline reading:
+
+  alt = pressure.altitude(Pressure, baseline);
+
+  //Serial.println(Pressure);
+  //Serial.println(alt);
+  //Serial.println(Pressure);
+
+}
+
+double getPressure()
+{
+  char status;
+  double P, p0, a;
+
+  // You must first get a temperature measurement to perform a pressure reading.
+
+  // Start a temperature measurement:
+  // If request is successful, the number of ms to wait is returned.
+  // If request is unsuccessful, 0 is returned.
+
+  status = pressure.startTemperature();
+  if (status != 0)
+  {
+    // Wait for the measurement to complete:
+
+    delay(status);
+
+    // Retrieve the completed temperature measurement:
+    // Note that the measurement is stored in the variable T.
+    // Use '&T' to provide the address of T to the function.
+    // Function returns 1 if successful, 0 if failure.
+
+    status = pressure.getTemperature(T);
+    if (status != 0)
+    {
+      // Start a pressure measurement:
+      // The parameter is the oversampling setting, from 0 to 3 (highest res, longest wait).
+      // If request is successful, the number of ms to wait is returned.
+      // If request is unsuccessful, 0 is returned.
+
+      status = pressure.startPressure(0);
+      if (status != 0)
+      {
+        // Wait for the measurement to complete:
+        delay(status);
+
+        // Retrieve the completed pressure measurement:
+        // Note that the measurement is stored in the variable P.
+        // Use '&P' to provide the address of P.
+        // Note also that the function requires the previous temperature measurement (T).
+        // (If temperature is stable, you can do one temperature measurement for a number of pressure measurements.)
+        // Function returns 1 if successful, 0 if failure.
+
+        status = pressure.getPressure(P, T);
+        if (status != 0)
+        {
+          return (P);
+        }
+        else Serial.println("error retrieving pressure measurement\n");
+      }
+      else Serial.println("error starting pressure measurement\n");
+    }
+    else Serial.println("error retrieving temperature measurement\n");
+  }
+  else Serial.println("error starting temperature measurement\n");
 }
 
 // Management release the button
@@ -255,10 +409,13 @@ void handleButtonReleaseEvents(Button &btn) {
 void handleButtonHoldEvents(Button &btn) {
   //debugMsg = "Hold";
   longPush = true;
-  screen = 1;
-  value = 0;
-  if (screen == 1 && ++etat > 2) {
-    etat = 0;
+  if (screen == 3) {
+    if (lancando) {
+      lancando = false;
+    } else {
+      lancando = true;
+    }
+    updateScreen = true;
     delay(500);
   }
   else if (screen == 2 || screen == 3) {
