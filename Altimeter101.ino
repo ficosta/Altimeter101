@@ -78,7 +78,7 @@ static unsigned char logo_ss_bits[] U8G_PROGMEM = {
 U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NO_ACK); //definicao do display oled utilizado
 
 //Definicoes botao unico
-#define BUTTON1_PIN     4
+#define BUTTON1_PIN     6
 Button button1 = Button(BUTTON1_PIN, BUTTON_PULLUP_INTERNAL);
 
 //Definicao do sensor barometrico
@@ -88,7 +88,13 @@ double baseline; // baseline pressure
 //Varialvel da altitude
 double T, alt, Pressure;
 
+<<<<<<< HEAD
+char voo = 0; //numero do voo
+
+bool lancado; //registrador de lancamento
+=======
 bool lancando;
+>>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
 
 int countDown = 10; //tempo contador lancamento
 const long interval = 1000;
@@ -200,7 +206,7 @@ void drawHome(void) {
       //Sensor bateria
       char buf[9];
       sprintf(buf, " %d", batPercent);
-      u8g.setFont(u8g_font_helvB14n);
+      u8g.setFont(u8g_font_6x13);
       u8g.drawStr(30, 30, buf);
 
       //Sensor Temperatura
@@ -210,7 +216,7 @@ void drawHome(void) {
 
       //Sensor Barometrico
       // ACERTAR CONVERSAO PARA DOUBLE
-      u8g.setFont(u8g_font_helvB14n);
+      u8g.setFont(u8g_font_6x13);
 
       char outBuffer[8];
       dtostrf(Pressure, 0, 2, outBuffer);
@@ -238,9 +244,17 @@ void drawReport(void) {
       u8g.drawStr(70, 30, "metros");
       u8g.drawStr(70, 45, "km/h");
 
+<<<<<<< HEAD
+      u8g.setFont(u8g_font_6x13);
+      char outBufferAltMax[8];
+      dtostrf(altMax, 0, 2, outBufferAltMax);
+      u8g.drawStr(25, 30, outBufferAltMax);
+      u8g.drawStr(25, 45, "--");
+=======
       u8g.setFont(u8g_font_helvB14n);
       u8g.drawStr(25, 30, "2500");
       u8g.drawStr(25, 45, "40");
+>>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
 
 
 
@@ -277,7 +291,15 @@ void drawLancamento(void) {
         }
 
       } else {
+<<<<<<< HEAD
+        u8g.drawStr(0, 32, "Voo n:");
+        u8g.drawStr(0, 52, "Hold para lancar...");
+
+        u8g.setFont(u8g_font_6x13);
+        u8g.drawStr(40, 32, "0");
+=======
         u8g.drawStr(80, 64, "Lancar?");
+>>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
         updateScreen = false;
       }
 
@@ -300,8 +322,15 @@ void drawAltiAtual(void) {
       u8g.setFont(u8g_font_6x13);
       u8g.drawStr( 0, 12, "ALTITUDE ATUAL:");
 
+<<<<<<< HEAD
+      char outBufferAlt[8];
+      dtostrf(alt, 0, 2, outBufferAlt);
+      u8g.setFont(u8g_font_6x13);
+      u8g.drawStr(25, 30, outBufferAlt);
+=======
 
 
+>>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
     } while ( u8g.nextPage() );
     Serial.println("ATual");
     updateScreen = false;
@@ -321,11 +350,20 @@ void readAltitudePressure(void) {
   // the new reading and the baseline reading:
 
   alt = pressure.altitude(Pressure, baseline);
+<<<<<<< HEAD
+  if (lancado) {
+    if (alt > altMax) {
+      altMax = alt;
+      Serial.println(altMax);
+    }
+  }
+=======
 
   //Serial.println(Pressure);
   //Serial.println(alt);
   //Serial.println(Pressure);
 
+>>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
 }
 
 double getPressure()
@@ -413,7 +451,12 @@ void handleButtonHoldEvents(Button &btn) {
     if (lancando) {
       lancando = false;
     } else {
+<<<<<<< HEAD
+      lancado = true;
+      altMax = 0;
+=======
       lancando = true;
+>>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
     }
     updateScreen = true;
     delay(500);
