@@ -87,20 +87,13 @@ SFE_BMP180 pressure;
 double baseline; // baseline pressure
 //Varialvel da altitude
 double T, alt, Pressure;
+double altMax;
 
-<<<<<<< HEAD
 char voo = 0; //numero do voo
 
 bool lancado; //registrador de lancamento
-=======
-bool lancando;
->>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
 
-int countDown = 10; //tempo contador lancamento
-const long interval = 1000;
-unsigned long previousMillis = 0;
-
-int screen = 0; // numero de cada tela
+int screen = 0; // numero da tela em exbicao
 bool updateScreen = false;
 #define NB_SCREENS 4  //numero maximo de telas
 
@@ -147,9 +140,10 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   button1.isPressed();
-  calculaBateria();
   readAltitudePressure();
-  //Serial.println("Loop"); //Rotina de debug do loop
+
+  calculaBateria();
+
 
   // desenhar telas
   switch (screen) {
@@ -170,8 +164,7 @@ void loop() {
       break;
   }
 
-  // } while( u8g.nextPage() );
-  delay(50);
+  //delay(50);
 }
 
 void drawSplashScreen(void) {
@@ -244,17 +237,11 @@ void drawReport(void) {
       u8g.drawStr(70, 30, "metros");
       u8g.drawStr(70, 45, "km/h");
 
-<<<<<<< HEAD
       u8g.setFont(u8g_font_6x13);
       char outBufferAltMax[8];
       dtostrf(altMax, 0, 2, outBufferAltMax);
       u8g.drawStr(25, 30, outBufferAltMax);
       u8g.drawStr(25, 45, "--");
-=======
-      u8g.setFont(u8g_font_helvB14n);
-      u8g.drawStr(25, 30, "2500");
-      u8g.drawStr(25, 45, "40");
->>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
 
 
 
@@ -269,45 +256,21 @@ void drawLancamento(void) {
     u8g.firstPage();
     do {
       u8g.setFont(u8g_font_6x13);
-      u8g.drawStr( 30, 12, "LANCAMENTO:");
+      u8g.drawStr(30, 10, "LANCAMENTO:");
 
-      if (lancando) {
-        u8g.drawStr(75, 64, "Abortar?");
-        updateScreen = true;
-        unsigned long currentMillis = millis();
-
-        if (currentMillis - previousMillis >= interval) {
-          previousMillis  = currentMillis;
-          countDown--;
-
-          if (countDown <= 0) {
-            Serial.println("LANCADO");
-            lancando = false;
-            countDown = 10;
-            screen = 0;
-             drawSplashScreen();
-          }
-          Serial.println(countDown);
-        }
+      if (lancado) {
+        u8g.drawStr(20, 32, "Registrando...");
+        u8g.drawStr(20, 52, "Finalizar?");
+        updateScreen = false;
 
       } else {
-<<<<<<< HEAD
         u8g.drawStr(0, 32, "Voo n:");
         u8g.drawStr(0, 52, "Hold para lancar...");
 
         u8g.setFont(u8g_font_6x13);
         u8g.drawStr(40, 32, "0");
-=======
-        u8g.drawStr(80, 64, "Lancar?");
->>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
         updateScreen = false;
       }
-
-      char bufCount[9];
-      sprintf(bufCount, " %d", countDown);
-      u8g.setFont(u8g_font_helvB14n);
-      u8g.drawStr(50, 40, bufCount);
-
 
     } while ( u8g.nextPage() );
     Serial.println("Lancamento");
@@ -321,19 +284,14 @@ void drawAltiAtual(void) {
     do {
       u8g.setFont(u8g_font_6x13);
       u8g.drawStr( 0, 12, "ALTITUDE ATUAL:");
+      u8g.drawStr(70, 30, "metros");
 
-<<<<<<< HEAD
       char outBufferAlt[8];
       dtostrf(alt, 0, 2, outBufferAlt);
       u8g.setFont(u8g_font_6x13);
       u8g.drawStr(25, 30, outBufferAlt);
-=======
-
-
->>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
     } while ( u8g.nextPage() );
-    Serial.println("ATual");
-    updateScreen = false;
+    updateScreen = true;
   }
 }
 
@@ -350,20 +308,12 @@ void readAltitudePressure(void) {
   // the new reading and the baseline reading:
 
   alt = pressure.altitude(Pressure, baseline);
-<<<<<<< HEAD
   if (lancado) {
     if (alt > altMax) {
       altMax = alt;
       Serial.println(altMax);
     }
   }
-=======
-
-  //Serial.println(Pressure);
-  //Serial.println(alt);
-  //Serial.println(Pressure);
-
->>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
 }
 
 double getPressure()
@@ -448,15 +398,11 @@ void handleButtonHoldEvents(Button &btn) {
   //debugMsg = "Hold";
   longPush = true;
   if (screen == 3) {
-    if (lancando) {
-      lancando = false;
+    if (lancado) {
+      lancado = false;
     } else {
-<<<<<<< HEAD
       lancado = true;
       altMax = 0;
-=======
-      lancando = true;
->>>>>>> parent of 4bdd89f... Ajustando variaveis, melhorando desempenho
     }
     updateScreen = true;
     delay(500);
